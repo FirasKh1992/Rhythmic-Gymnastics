@@ -2,9 +2,10 @@ const express = require('express');
 const router = express.Router();
 const auth = require('../../middleware/auth');
 
+//importing models
 const Profile = require('../../models/Profile');
 const User = require('../../models/User');
-// const Post = require('../../models/Post');
+const Tournament = require('../../models/Tournament');
 
 const { validationResult, check } = require('express-validator');
 //@route  GET api/profile/me
@@ -135,6 +136,10 @@ router.get('/', async (req, res) => {
 // @route put api/profile/score/:tournament_id/:player_id
 // @desc add score to player Profile tournaments
 // @access  private
+
+
+
+
 router.put('/score/:tournament_name/:player_mail', auth, async (req, res) => {
   try {
     const user = await User.findOne({
@@ -155,10 +160,24 @@ router.put('/score/:tournament_name/:player_mail', auth, async (req, res) => {
         .json({ errors: [{ msg: 'this user had no profile yet.' }] });
     }
 
+    const tournament = await Tournament.findOne({ eventName: req.params.tournament_name });
+
     Index = player.tournaments
       .map(item => item.eventName)
       .indexOf(req.params.tournament_name);
     const { dScore, eScore, ded, apparatus, total } = req.body;
+    const newTournament={
+      category:tournament.category,
+      dScore:dScore,
+      eScore:eScore,
+      eventName:req.params.tournament_name,
+      city:tournament.city,
+      country:tournament.country,
+      playerName:player.tournaments[Index].playerName,
+      apparatus:apparatus,
+      ded:ded,
+      total:total,
+    }
     if (Index === -1) {
       return res
         .status(500)
@@ -170,12 +189,7 @@ router.put('/score/:tournament_name/:player_mail', auth, async (req, res) => {
           ],
         });
     }
-    player.tournaments[Index].dScore = dScore;
-    player.tournaments[Index].eScore = eScore;
-    player.tournaments[Index].ded = ded;
-    player.tournaments[Index].apparatus = apparatus;
-    player.tournaments[Index].total = total;
-    console.log(player);
+   player.tournaments=[...player.tournaments,newTournament]
     await player.save();
 
     res.json(player);
@@ -184,5 +198,6 @@ router.put('/score/:tournament_name/:player_mail', auth, async (req, res) => {
     res.status(500).send(`Server error ${err.message}`);
   }
 });
+
 
 module.exports = router;
